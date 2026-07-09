@@ -1,7 +1,7 @@
 from pathlib import Path
 
-def gen_filenames(top_dir):
-    yield from Path(top_dir).rglob("*.txt")
+def gen_filenames(top_dir, path_filter):
+    yield from Path(top_dir).rglob(path_filter)
 
 def gen_lines(filenames):
     for filename in filenames:
@@ -19,11 +19,24 @@ class apacheParser:
     def __init__(self):
         self.logpat = re.compile(self.log_regex)
 
-    def parse(self, line):
+    def __call__(self, line):
         matches = self.logpat.match(line)
         res = {k[0]: v if len(k) == 1 else k[1](v) for k,v in zip(self.schema, matches.groups())}
         return res
 
+import csv
+
+class csvParser:
+    def __init__(self):
+        self.headers = None
+
+    def __call__(self, log):
+        if not self.headers:
+            self.headers = list(csv.reader([log]))[0]
+            return {k: None for k in self.headers}
+        values = list(csv.reader([log]))[0]
+        return dict(zip(self.headers, values))
+    
 class accumulator:
     def __init__(self, field):
         self.field = field
@@ -41,10 +54,14 @@ class histogram:
 
     def __call__(self, log):
         self.value[log.get(self.field, "-")] += 1
-    
+
+class tee:
+    def __call__(self, log):
+        print(log)
+        
 def gen_parse(lines, parser):
     for line in lines:
-        yield parser.parse(line)
+        yield parser(line)
 
 def gen_process(parseds, *processors):
     for f in parseds:
@@ -71,7 +88,7 @@ def proc_chain(line, chain):
         for c in chain[1]:
             proc_chain(l, c)
             
-f = gen_filenames("/Users/kousiknandy/Workspace/ractice/log_processor/logs/apache/")
+f = gen_filenames("/Users/kousiknandy/Workspace/ractice/log_processor/logs/apache/", "*.txt")
 l = gen_lines(f)
 p = gen_parse(l, apacheParser())
 
@@ -95,4 +112,16 @@ pipeline = [
 
 gen_process_chain(p, pipeline)
 
-pipeline[1][1][0][0].value.keys()
+
+f = gen_filenames("/Users/kousiknandy/Workspace/ractice/log_processor/logs/apps/", "*.csv")
+l = gen_lines(f)
+p = gen_parse(l, csvParser())
+pipeline2 = [
+    [
+        filters("Daily Charge (GBP)", operator.eq, "-14.50"),
+        [
+            [tee()]
+        ]
+    ]
+]
+gen_process_chain(p, pipeline2)
