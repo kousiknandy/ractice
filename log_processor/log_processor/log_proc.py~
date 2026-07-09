@@ -1,5 +1,0 @@
-from pathlib import Path
-
-def gen_filenames(top_dir):
-    yield from Path(top_dir).rglob("*.txt")
-
