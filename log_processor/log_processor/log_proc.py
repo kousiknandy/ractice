@@ -58,16 +58,22 @@ class histogram:
 class tee:
     def __call__(self, log):
         print(log)
+
+class unique_tee:
+    def __init__(self, field):
+        self.seen = set()
+        self.field = field
+
+    def __call__(self, log):
+        val = log.get(self.field)
+        if val not in self.seen:
+            print(val)
+            self.seen.add(val)
         
 def gen_parse(lines, parser):
     for line in lines:
         yield parser(line)
 
-def gen_process(parseds, *processors):
-    for f in parseds:
-        for p in processors:
-            p(f)
-            
 class filters:
     def __init__(self, field, op, val):
         self.field = field
@@ -87,13 +93,12 @@ def proc_chain(line, chain):
     if l and len(chain) > 1:
         for c in chain[1]:
             proc_chain(l, c)
-            
-f = gen_filenames("/Users/kousiknandy/Workspace/ractice/log_processor/logs/apache/", "*.txt")
-l = gen_lines(f)
-p = gen_parse(l, apacheParser())
 
 import operator
 
+f = gen_filenames("/Users/kousiknandy/Workspace/ractice/log_processor/logs/apache/", "*.txt")
+l = gen_lines(f)
+p = gen_parse(l, apacheParser())
 pipeline = [
     [
         filters("method", operator.eq, "PUT"),
@@ -105,11 +110,11 @@ pipeline = [
     [
         filters("code", operator.ge, 500),
         [
-            [histogram("url")]
+            [histogram("url")],
+            [unique_tee("url")]
         ]
     ]
 ]
-
 gen_process_chain(p, pipeline)
 
 
