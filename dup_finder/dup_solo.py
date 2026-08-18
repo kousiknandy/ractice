@@ -1,6 +1,7 @@
 import hashlib
 import os
 from collections import defaultdict
+import sys
 
 def filenames(topdir):
     for dirname, _, filenames in os.walk(topdir):
@@ -21,24 +22,32 @@ def hashfile(filename, maxsz=0):
     return (filename, size, hasher.hexdigest())
 
 FASTSZ = 64
-hashdict = defaultdict(list)
-for F in filenames("data"):
-    f, s, h = hashfile(F,FASTSZ)
-    hashdict[h].append((f,s))
-for k,v in hashdict.items(): print(k, v)
-print("*"*30)
-finaldict = defaultdict(list)
-for h, v in hashdict.items():
-    if len(v) == 1: continue
-    for f, s in v:
-        if s <= FASTSZ:
-            finaldict[h].append((f, s)) 
-        else:
-            f, s, nh = hashfile(f)
-            finaldict[nh].append((f, s))
-for k,v in finaldict.items(): print(k, v)
-print("*"*30)
-for k,v in finaldict.items():
-    if len(v) == 1: continue
-    print(tuple(f for f, _ in v))
+    
+def fast_collisions(filenames):
+    hashdict = defaultdict(list)
+    for F in filenames:
+        f, s, h = hashfile(F,FASTSZ)
+        hashdict[h].append((f,s))
+    for k,v in hashdict.items():
+        if len(v) > 1:
+            yield k, v
+
+def final_collisions(collisions):    
+    finaldict = defaultdict(list)
+    for hash, files in collisions:
+        # print("suspect", files)
+        for f, s in files:
+            if s <= FASTSZ:
+                finaldict[hash].append((f, s)) 
+            else:
+                f, s, nh = hashfile(f)
+                finaldict[nh].append((f, s))
+    for k,v in finaldict.items():
+        if len(v) == 1: continue
+        yield tuple(f for f, _ in v)
         
+f = filenames(sys.argv[1] if len(sys.argv) > 1 else "data")
+c1 = fast_collisions(f)
+c2 = final_collisions(c1)
+
+for c in c2: print(c)
