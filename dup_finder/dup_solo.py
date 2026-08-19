@@ -8,10 +8,15 @@ def filenames(topdir):
         for file in filenames:
             yield os.path.join(dirname, file)
 
+hash_count = 0
+
 def hashfile(filename, maxsz=0):
+    global hash_count
+    
     hasher = hashlib.sha256()
     size = os.path.getsize(filename)
     if size == 0: return (filename, 0, None)
+    hash_count += 1
     with open(filename, "rb") as f:
         if maxsz > 0:
             chunk = f.read(maxsz)
@@ -51,3 +56,4 @@ c1 = fast_collisions(f)
 c2 = final_collisions(c1)
 
 for c in c2: print(c)
+print(hash_count)
