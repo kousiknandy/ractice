@@ -43,7 +43,7 @@ def fastcollisions(files):
             done, pending = wait(pending, return_when=FIRST_COMPLETED)
             for f in done:
                 f, s, h = f.result()
-                hashmap[h].append((f,s))
+                hashmap[h].append((f,s,h))
                 if len(hashmap[h]) >= 2:
                     if len(hashmap[h]) == 2:
                         yield hashmap[h][0]
@@ -55,10 +55,40 @@ def fastcollisions(files):
                     pass
                 
 def slowcollisions(files):
-    pass
+    hashmap = defaultdict(list)
+    pending = set()
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        while len(pending) < 8:
+            try:
+                f,s,h = next(files)
+                if s <= PREFIXLEN:
+                    hashmap[h].append(f)
+                else:
+                    pending.add(executor.submit(hashfile, f, s, 0))
+            except StopIteration:
+                break
+        while pending:
+            done, pending = wait(pending, return_when=FIRST_COMPLETED)
+            for f in done:
+                f, s, h = f.result()
+                hashmap[h].append(f)
+                while True:
+                    try:
+                        f, s, h = next(files)
+                        if s <= PREFIXLEN:
+                            hashmap[h].append(f)
+                        else:
+                            pending.add(executor.submit(hashfile, f, s, 0))
+                            break
+                    except StopIteration:
+                        break
+    for k, v in hashmap.items():
+        if len(v) == 1: continue
+        yield v
 
 f1 = files(sys.argv[1] if len(sys.argv) > 1 else "data")
 f2 = sizefilter(f1)
 f3 = fastcollisions(f2)
+f4 = slowcollisions(f3)
 
-print(list(f3))
+for f in f4: print(f)
