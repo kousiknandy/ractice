@@ -1,6 +1,12 @@
-from pathlib import PurePath
+from pathlib import PurePath, Path
 
 OUTPUT = "output"
+
+
+def walk_files(top_dir, filters):
+    path = Path(top_dir)
+    for f in filters:
+        yield from path.rglob(f, case_sensitive=False)
 
 
 def get_output_path(image_path: str, transform_path: str):
