@@ -1,0 +1,7 @@
+{
+  "transformations": [
+    {"type": "grayscale"},
+    {"type": "scale", "factor": 0.5},
+    {"type": "rotate", "angle": 90}
+  ]
+}
