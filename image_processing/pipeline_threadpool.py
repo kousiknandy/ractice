@@ -21,7 +21,7 @@ def process_images(
     ops = (
         (i, t, "/var/tmp/" + get_output_path(i, t)) for i, t in product(images, xforms)
     )
-    with ThreadPoolExecutor(max_workers=3) as executor:
+    with ThreadPoolExecutor(max_workers=8) as executor:
         for res in executor.map(lambda p: transform_image(*p), ops):
             pass
 
