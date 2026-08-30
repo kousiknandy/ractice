@@ -2,6 +2,7 @@ import json
 from PIL import Image, ImageOps, ImageFilter
 
 from pathlib import Path
+from functools import cache
 
 
 class ImageProcessingDispatcher:
@@ -35,9 +36,14 @@ class PILDispatcher(ImageProcessingDispatcher):
                 return image
 
 
-def transform_image(image_file, transform_file, output_file):
+@cache
+def transform_config(transform_file):
     with open(transform_file) as tf:
-        xforms = json.load(tf)
+        return json.load(tf)
+
+
+def transform_image(image_file, transform_file, output_file):
+    xforms = transform_config(transform_file)
     with Image.open(image_file) as img:
         for transform in xforms.get("transformations", []):
             img = PILDispatcher.dispatch(img, transform.get("type"), **transform)
