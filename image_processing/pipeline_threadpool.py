@@ -19,8 +19,7 @@ def process_images(
     images = walk_files(image_dir, image_files)
     xforms = walk_files(transformation_dir, xform_files)
     ops = (
-        (str(i), str(t), "/var/tmp/" + get_output_path(i, t))
-        for i, t in product(images, xforms)
+        (i, t, "/var/tmp/" + get_output_path(i, t)) for i, t in product(images, xforms)
     )
     with ThreadPoolExecutor(max_workers=3) as executor:
         res = executor.map(lambda p: transform_image(*p), ops)
